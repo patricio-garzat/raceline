@@ -1,0 +1,56 @@
+<!doctype html><meta charset="utf-8"><style>html,body{margin:0;width:1024px;height:1024px;overflow:hidden;background:#0A0E15}svg{display:block;width:1024px;height:1024px}</style>
+<!-- RaceLine · ícono de la app. Una "R" hecha con una calle de carreras: pianos rojos y blancos, línea de carrera ámbar y un monoplaza que sale de la pierna de la R. -->
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22324B"/><stop offset=".5" stop-color="#131C2B"/><stop offset="1" stop-color="#0A0E15"/></linearGradient>
+    <radialGradient id="glow" cx=".74" cy=".8" r=".62"><stop offset="0" stop-color="#F2A65A" stop-opacity=".26"/><stop offset="1" stop-color="#F2A65A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glow2" cx=".2" cy=".12" r=".55"><stop offset="0" stop-color="#6E9BE0" stop-opacity=".22"/><stop offset="1" stop-color="#6E9BE0" stop-opacity="0"/></radialGradient>
+    <linearGradient id="amber" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#FFC986"/><stop offset=".55" stop-color="#F7A55A"/><stop offset="1" stop-color="#F2705B"/></linearGradient>
+    <linearGradient id="body" x1="0" y1="-7" x2="0" y2="7" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59A86"/><stop offset=".45" stop-color="#E5705B"/><stop offset="1" stop-color="#B9503E"/></linearGradient>
+    <filter id="blur" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="blur2" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="5"/></filter>
+    <pattern id="carbon" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="none"/><path d="M0 0h7v7H0zM7 7h7v7H7z" fill="#fff" fill-opacity=".028"/></pattern>
+    <path id="r1" d="M28 90 L28 30 C28 16 38 10 52 10 L62 10 C76 10 84 19 84 31 C84 43 76 52 62 52 L28 52"/>
+    <path id="r2" d="M50 52 L82 90"/>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#carbon)"/>
+  <rect width="1024" height="1024" fill="url(#glow2)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <!-- rayas de velocidad -->
+  <g stroke="#fff" stroke-linecap="round" fill="none" opacity=".1"><path d="M60 700 L360 460" stroke-width="5"/><path d="M110 800 L470 520" stroke-width="3"/><path d="M700 150 L960 -40" stroke-width="4"/><path d="M820 300 L1100 90" stroke-width="3"/></g>
+  <g transform="translate(150 196) scale(6.5)">
+    <!-- sombra -->
+    <g fill="none" stroke="#000" stroke-linecap="butt" stroke-linejoin="round" opacity=".5" filter="url(#blur)" transform="translate(1.6 3.4)"><use href="#r1" stroke-width="22"/><use href="#r2" stroke-width="22"/></g>
+    <!-- pianos rojos y blancos -->
+    <g fill="none" stroke-linejoin="round" stroke-linecap="butt">
+      <use href="#r1" stroke="#C8453B" stroke-width="21.5" stroke-dasharray="4.4 4.4"/>
+      <use href="#r1" stroke="#F3EBDD" stroke-width="21.5" stroke-dasharray="4.4 4.4" stroke-dashoffset="4.4"/>
+      <use href="#r2" stroke="#C8453B" stroke-width="21.5" stroke-dasharray="4.4 4.4"/>
+      <use href="#r2" stroke="#F3EBDD" stroke-width="21.5" stroke-dasharray="4.4 4.4" stroke-dashoffset="4.4"/>
+    </g>
+    <!-- asfalto -->
+    <g fill="none" stroke-linejoin="round" stroke-linecap="butt">
+      <use href="#r1" stroke="#EEE9DE" stroke-width="16.6"/><use href="#r2" stroke="#EEE9DE" stroke-width="16.6"/>
+      <use href="#r1" stroke="#374051" stroke-width="15"/><use href="#r2" stroke="#374051" stroke-width="15"/>
+      <use href="#r1" stroke="#fff" stroke-opacity=".5" stroke-width=".7" stroke-dasharray="3.2 3.6"/><use href="#r2" stroke="#fff" stroke-opacity=".5" stroke-width=".7" stroke-dasharray="3.2 3.6"/>
+    </g>
+    <!-- línea de carrera ámbar con brillo -->
+    <use href="#r1" fill="none" stroke="#F2A65A" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity=".7" filter="url(#blur2)" transform="translate(-3 -2.6) scale(1)"/>
+    <path d="M25.2 90 L25.2 31 C25.2 20 34 13.4 50 13.4 L60 13.4 C72 13.4 79.6 20.6 79.6 31 C79.6 41 72 48.6 60 48.6 L36 48.6" fill="none" stroke="url(#amber)" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- monoplaza saliendo por la pierna de la R -->
+    <g transform="translate(78.5 86.5) rotate(51) scale(.5)">
+      <ellipse cx="3" cy="4" rx="21" ry="10" fill="#000" opacity=".35" filter="url(#blur2)"/>
+      <g fill="#14161A"><rect x="-12.9" y="-9.8" width="8.6" height="4.6" rx="1.5"/><rect x="-12.9" y="5.2" width="8.6" height="4.6" rx="1.5"/><rect x="6.1" y="-9.6" width="7.4" height="4" rx="1.5"/><rect x="6.1" y="5.6" width="7.4" height="4" rx="1.5"/></g>
+      <rect x="-18.2" y="-8" width="4.6" height="16" rx="1.1" fill="#23272E"/><rect x="-16.9" y="-7.6" width=".6" height="15.2" fill="#F3EBDD"/><rect x="-18.2" y="-8.2" width="4.6" height="1.1" fill="#E5705B"/><rect x="-18.2" y="7.1" width="4.6" height="1.1" fill="#E5705B"/>
+      <path d="M-14.5 -2 Q-8 -3.6 -6 -5.6 Q-3.5 -7 .5 -6.2 Q3.8 -5.4 5 -3 L14.8 -1.4 Q16.4 0 14.8 1.4 L5 3 Q3.8 5.4 .5 6.2 Q-3.5 7 -6 5.6 Q-8 3.6 -14.5 2 Z" fill="url(#body)" stroke="rgba(0,0,0,.25)" stroke-width=".55"/>
+      <rect x="-15" y="-.95" width="30" height="1.9" fill="#F3EBDD" opacity=".9" clip-path="none"/>
+      <ellipse cx=".4" cy="0" rx="4.1" ry="2.8" fill="#101317"/><circle cx=".7" cy="0" r="1.95" fill="#F3EBDD"/><rect x="1.6" y="-1.2" width="1" height="2.4" fill="#171B21"/>
+      <path d="M-1.4 -3.1 Q4.4 -2.3 4.8 0 Q4.4 2.3 -1.4 3.1 M4.8 0 L6.4 0" fill="none" stroke="#232830" stroke-width=".85" stroke-linecap="round"/>
+      <circle cx="10" cy="0" r="1.9" fill="#fff"/><circle cx="10" cy="0" r=".85" fill="#E5705B"/>
+      <rect x="13.4" y="-8.8" width="4.4" height="17.6" rx="1.1" fill="#23272E"/><rect x="14.9" y="-8.3" width=".6" height="16.6" fill="#F3EBDD"/><rect x="13.4" y="-9" width="4.4" height="1.1" fill="#E5705B"/><rect x="13.4" y="7.9" width="4.4" height="1.1" fill="#E5705B"/>
+    </g>
+    <!-- estelas del carro -->
+    <g stroke="#F2A65A" stroke-linecap="round" fill="none" opacity=".75"><path d="M73 77 L66 70" stroke-width="1.4"/><path d="M76 74 L70 66.5" stroke-width=".8"/></g>
+  </g>
+</svg>

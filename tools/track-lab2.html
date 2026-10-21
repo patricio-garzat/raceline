@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8">
+<style>body{margin:0;background:#E9DFCC;font:12px sans-serif;display:flex;gap:10px}svg{width:380px;height:570px;background:#E9DFCC;border:1px solid #bbb}</style>
+<body>
+<script>
+// Laboratorio de pistas (polígono con radios): dibuja, mide separación entre tramos y el radio mínimo.
+const levels = JSON.parse(decodeURIComponent(location.hash.slice(1) || "[]"));
+function fillet(poly, step = 3) {
+  const n = poly.length, V = poly.map(p => [p[0], p[1]]), R = poly.map(p => p[2] || 0);
+  const info = V.map((v, i) => {
+    const p = V[(i - 1 + n) % n], q = V[(i + 1) % n];
+    const u = [v[0] - p[0], v[1] - p[1]], w = [q[0] - v[0], q[1] - v[1]], lu = Math.hypot(...u), lw = Math.hypot(...w);
+    u[0] /= lu; u[1] /= lu; w[0] /= lw; w[1] /= lw;
+    const cr = u[0] * w[1] - u[1] * w[0], dot = Math.max(-1, Math.min(1, u[0] * w[0] + u[1] * w[1])), th = Math.acos(dot);
+    return { v, u, w, cr, th, lu, lw, t: th < 1e-3 ? 0 : R[i] * Math.tan(th / 2), r: R[i] };
+  });
+  for (let k = 0; k < 6; k++) info.forEach((a, i) => { const b = info[(i + 1) % n]; const len = b.lu; if (a.t + b.t > len * 0.98) { const f = len * 0.98 / (a.t + b.t); a.t *= f; b.t *= f; } });
+  const out = [];
+  info.forEach((a) => {
+    if (a.t < 0.01) { out.push(a.v); return; }
+    const r = a.t / Math.tan(a.th / 2), s = Math.sign(a.cr);
+    const A = [a.v[0] - a.u[0] * a.t, a.v[1] - a.u[1] * a.t];
+    const nrm = [-a.u[1] * s, a.u[0] * s]; // hacia el lado del giro
+    const C = [A[0] + nrm[0] * r, A[1] + nrm[1] * r];
+    const a0 = Math.atan2(A[1] - C[1], A[0] - C[0]), steps = Math.max(2, Math.ceil(a.th * r / step));
+    for (let k = 0; k <= steps; k++) { const ang = a0 + s * a.th * k / steps; out.push([C[0] + Math.cos(ang) * r, C[1] + Math.sin(ang) * r]); }
+  });
+  return out;
+}
+levels.forEach((lv) => {
+  const P = fillet(lv.poly), n = P.length;
+  let minSep = 1e9;
+  for (let i = 0; i < n; i += 2) for (let j = i + 1; j < n; j += 2) {
+    const along = Math.min(j - i, n - (j - i)) * 3;
+    if (along < 170) continue;
+    const d = Math.hypot(P[i][0] - P[j][0], P[i][1] - P[j][1]);
+    if (d < minSep) minSep = d;
+  }
+  let per = 0; for (let i = 0; i < n; i++) per += Math.hypot(P[(i + 1) % n][0] - P[i][0], P[(i + 1) % n][1] - P[i][1]);
+  const d = "M" + P.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join("L") + "Z";
+  const el = document.createElement("div");
+  el.innerHTML = `<svg viewBox="0 0 600 900"><path d="${d}" fill="none" stroke="#F4EDE0" stroke-width="${lv.roadW + 28}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#2B2F36" stroke-width="${lv.roadW}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#ccc" stroke-width="2" stroke-dasharray="14 18"/>${lv.poly.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#F2A65A"/><text x="${p[0] + 7}" y="${p[1] - 7}" font-size="18" fill="#c33">${i}</text>`).join("")}<circle cx="${lv.start[0]}" cy="${lv.start[1]}" r="10" fill="none" stroke="lime" stroke-width="4"/></svg><div>${lv.name}: sep mín ${minSep.toFixed(0)} (necesita ≥ ${lv.roadW + 34}), perímetro ${per.toFixed(0)}</div>`;
+  document.body.appendChild(el);
+});
+</script>

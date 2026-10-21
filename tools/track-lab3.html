@@ -1,0 +1,46 @@
+<!doctype html><meta charset="utf-8">
+<style>body{margin:0;background:#E9DFCC;font:11px sans-serif;display:flex;flex-wrap:wrap;gap:6px;padding:6px}div.c{width:238px}svg{width:238px;height:372px;background:#E9DFCC;border:1px solid #bbb}</style>
+<body>
+<script src="_levels.js"></script>
+<script>
+// Laboratorio de circuitos (polígono con radios): dibuja, mide separación entre tramos lejanos y el perímetro.
+function fillet(poly, step = 3) {
+  const n = poly.length, V = poly.map(p => [p[0], p[1]]), R = poly.map(p => p[2] || 0);
+  const info = V.map((v, i) => {
+    const p = V[(i - 1 + n) % n], q = V[(i + 1) % n];
+    const u = [v[0] - p[0], v[1] - p[1]], w = [q[0] - v[0], q[1] - v[1]], lu = Math.hypot(...u), lw = Math.hypot(...w);
+    u[0] /= lu; u[1] /= lu; w[0] /= lw; w[1] /= lw;
+    const cr = u[0] * w[1] - u[1] * w[0], th = Math.acos(Math.max(-1, Math.min(1, u[0] * w[0] + u[1] * w[1])));
+    return { v, u, w, cr, th, lu, t: th < 1e-3 ? 0 : R[i] * Math.tan(th / 2) };
+  });
+  for (let k = 0; k < 6; k++) info.forEach((a, i) => { const b = info[(i + 1) % n]; if (a.t + b.t > b.lu * 0.98) { const f = b.lu * 0.98 / (a.t + b.t); a.t *= f; b.t *= f; } });
+  const out = [];
+  info.forEach((a) => {
+    if (a.t < 0.01) { out.push(a.v); return; }
+    const r = a.t / Math.tan(a.th / 2), s = Math.sign(a.cr);
+    const A = [a.v[0] - a.u[0] * a.t, a.v[1] - a.u[1] * a.t], C = [A[0] - a.u[1] * s * r, A[1] + a.u[0] * s * r];
+    const a0 = Math.atan2(A[1] - C[1], A[0] - C[0]), steps = Math.max(2, Math.ceil(a.th * r / step));
+    for (let k = 0; k <= steps; k++) { const ang = a0 + s * a.th * k / steps; out.push([C[0] + Math.cos(ang) * r, C[1] + Math.sin(ang) * r]); }
+  });
+  return out;
+}
+LEVELS_LAB.forEach((lv) => {
+  const P = fillet(lv.poly), n = P.length;
+  let minSep = 1e9;
+  for (let i = 0; i < n; i += 2) for (let j = i + 1; j < n; j += 2) {
+    const along = Math.min(j - i, n - (j - i)) * 3; if (along < 190) continue;
+    const d = Math.hypot(P[i][0] - P[j][0], P[i][1] - P[j][1]); if (d < minSep) minSep = d;
+  }
+  // radio mínimo de la línea central (círculo por 3 puntos separados ~10 u)
+  let rmin = 1e9, rAt = 0; const st = 4;
+  for (let i = 0; i < n; i++) { const a = P[(i - st + n) % n], b = P[i], c = P[(i + st) % n];
+    const ab = Math.hypot(a[0] - b[0], a[1] - b[1]), bc = Math.hypot(c[0] - b[0], c[1] - b[1]), ca = Math.hypot(a[0] - c[0], a[1] - c[1]);
+    const area = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2; const r = area < 1e-6 ? 1e9 : (ab * bc * ca) / (4 * area); if (r < rmin) { rmin = r; rAt = i; } }
+  let per = 0; for (let i = 0; i < n; i++) per += Math.hypot(P[(i + 1) % n][0] - P[i][0], P[(i + 1) % n][1] - P[i][1]);
+  const d = "M" + P.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join("L") + "Z";
+  const el = document.createElement("div"); el.className = "c";
+  const need = lv.roadW / 2 + 14, ok = minSep >= lv.roadW + 34 && rmin >= need;
+  el.innerHTML = `<svg viewBox="0 0 640 1000"><path d="${d}" fill="none" stroke="#F4EDE0" stroke-width="${lv.roadW + 28}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#2B2F36" stroke-width="${lv.roadW}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#ccc" stroke-width="2" stroke-dasharray="14 18"/>${lv.poly.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="#F2A65A"/><text x="${p[0] + 8}" y="${p[1] - 8}" font-size="24" fill="#c33">${i}</text>`).join("")}<circle cx="${P[rAt][0]}" cy="${P[rAt][1]}" r="14" fill="none" stroke="red" stroke-width="4"/><circle cx="${lv.start[0]}" cy="${lv.start[1]}" r="12" fill="none" stroke="lime" stroke-width="5"/></svg><div style="color:${ok ? '#171' : '#c00'}">${lv.name}: sep ${minSep.toFixed(0)} / ${lv.roadW + 34} · perím ${per.toFixed(0)} · Rmín ${rmin.toFixed(0)} (≥${need})</div>`;
+  document.body.appendChild(el);
+});
+</script>

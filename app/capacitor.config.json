@@ -1,0 +1,14 @@
+{
+  "appId": "com.blubergames.raceline",
+  "appName": "RaceLine",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#FFFFFF",
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "StatusBar": { "style": "DARK", "overlaysWebView": true }
+  }
+}

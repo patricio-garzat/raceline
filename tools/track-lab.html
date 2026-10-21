@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8">
+<style>body{margin:0;background:#E9DFCC;font:12px sans-serif;display:flex;gap:10px}svg{width:380px;height:570px;background:#E9DFCC;border:1px solid #bbb}</style>
+<body>
+<script>
+// Laboratorio de pistas: dibuja las pistas de los niveles y mide la separación entre tramos lejanos.
+const levels = JSON.parse(decodeURIComponent(location.hash.slice(1) || "[]"));
+function catmull(pts, per) { const n = pts.length, out = []; for (let i = 0; i < n; i++) { const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n]; for (let k = 0; k < per; k++) { const t = k / per, t2 = t * t, t3 = t2 * t; out.push([0, 1].map(c => 0.5 * ((2 * p1[c]) + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3))); } } return out; }
+levels.forEach((lv) => {
+  const P = catmull(lv.ctrl, 20), n = P.length;
+  let minSep = 1e9;
+  for (let i = 0; i < n; i += 2) for (let j = i + 1; j < n; j += 2) {
+    const along = Math.min(j - i, n - (j - i));
+    if (along < 60) continue;
+    const d = Math.hypot(P[i][0] - P[j][0], P[i][1] - P[j][1]);
+    if (d < minSep) minSep = d;
+  }
+  let per = 0; for (let i = 0; i < n; i++) per += Math.hypot(P[(i + 1) % n][0] - P[i][0], P[(i + 1) % n][1] - P[i][1]);
+  const d = "M" + P.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join("L") + "Z";
+  const el = document.createElement("div");
+  el.innerHTML = `<svg viewBox="0 0 600 900"><path d="${d}" fill="none" stroke="#F4EDE0" stroke-width="${lv.roadW + 28}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#2B2F36" stroke-width="${lv.roadW}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#ccc" stroke-width="2" stroke-dasharray="14 18"/>${lv.ctrl.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#F2A65A"/><text x="${p[0] + 7}" y="${p[1] - 7}" font-size="18" fill="#c33">${i}</text>`).join("")}<circle cx="${lv.start[0]}" cy="${lv.start[1]}" r="10" fill="none" stroke="lime" stroke-width="4"/></svg><div>${lv.name}: separación mínima ${minSep.toFixed(0)} (road ${lv.roadW}, mínimo cómodo ${lv.roadW + 40}), perímetro ${per.toFixed(0)}</div>`;
+  document.body.appendChild(el);
+});
+</script>

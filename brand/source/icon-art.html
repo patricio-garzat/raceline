@@ -1,0 +1,35 @@
+<!doctype html><meta charset="utf-8"><style>
+html,body{margin:0;width:1024px;height:1024px;overflow:hidden;background:#E9DFCC}
+svg{display:block;width:1024px;height:1024px}
+</style>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EFE6D4"/><stop offset="1" stop-color="#E2D6BE"/></linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="6" dy="9" stdDeviation="9" flood-color="#46321c" flood-opacity=".28"/></filter>
+    <linearGradient id="car" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EE8B77"/><stop offset=".5" stop-color="#E5705B"/><stop offset="1" stop-color="#C95642"/></linearGradient>
+  <path id="t" d="M300 260 C 440 150 640 170 740 270 C 840 370 780 470 650 500 C 520 530 500 620 620 680 C 740 740 700 860 540 850 C 380 840 220 800 190 650 C 160 500 250 380 300 260 Z"/></defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- city blocks -->
+  <g fill="#D9A58B" opacity=".9"><rect x="70" y="70" width="150" height="130" rx="10"/><rect x="800" y="780" width="150" height="170" rx="10"/><rect x="70" y="800" width="120" height="150" rx="10"/></g>
+  <g fill="#A9C1A0" opacity=".95"><rect x="800" y="70" width="150" height="120" rx="10"/><rect x="250" y="70" width="90" height="90" rx="10"/><rect x="860" y="300" width="90" height="150" rx="10"/></g>
+  <g fill="#C9C4BA" opacity=".95"><rect x="70" y="260" width="100" height="160" rx="10"/><rect x="230" y="850" width="150" height="100" rx="10"/></g>
+  <!-- track -->
+  <g filter="url(#sh)">
+    <use href="#t" stroke="#F4EDE0" stroke-width="214" fill="none" stroke-linejoin="round"/>
+    <use href="#t" stroke="#2B2F36" stroke-width="170" fill="none" stroke-linejoin="round"/>
+    <use href="#t" stroke="#EDE5D4" stroke-width="158" fill="none" stroke-linejoin="round"/>
+    <use href="#t" stroke="#2B2F36" stroke-width="150" fill="none" stroke-linejoin="round"/>
+  </g>
+  <use href="#t" stroke="rgba(243,235,221,.75)" stroke-width="5" stroke-dasharray="30 36" fill="none" stroke-linejoin="round"/>
+  <!-- racing line -->
+  <path d="M300 230 C 450 130 650 160 750 270 C 830 360 770 440 650 470 C 500 505 470 640 610 710 C 740 775 690 840 540 830 C 380 820 240 790 215 650 C 190 510 270 380 300 230" fill="none" stroke="#F2A65A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- car -->
+  <g transform="translate(300 232) rotate(-34)" filter="url(#sh)">
+    <rect x="-72" y="-34" width="144" height="68" rx="22" fill="url(#car)" stroke="rgba(0,0,0,.2)" stroke-width="3"/>
+    <rect x="-70" y="-5" width="140" height="10" fill="rgba(255,255,255,.35)"/>
+    <rect x="-38" y="-27" width="66" height="54" rx="14" fill="#1f262d"/>
+    <rect x="-22" y="-21" width="40" height="42" rx="11" fill="#EE8B77"/>
+    <rect x="60" y="-24" width="10" height="12" rx="4" fill="#FFF3C9"/><rect x="60" y="12" width="10" height="12" rx="4" fill="#FFF3C9"/>
+    <rect x="-72" y="-22" width="8" height="12" rx="4" fill="#B53A3A"/><rect x="-72" y="10" width="8" height="12" rx="4" fill="#B53A3A"/>
+  </g>
+</svg>

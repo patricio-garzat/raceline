@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#888;display:flex;gap:10px}canvas{width:520px;height:520px;background:#fff}</style>
+<script src="../src/js/05-logo.js"></script>
+<canvas id="a" width="1111" height="1111"></canvas><canvas id="b" width="1111" height="1111"></canvas>
+<script>
+const g=document.getElementById('a').getContext('2d');
+g.fillStyle=LOGO.black; g.beginPath(); g.roundRect(0,0,LOGO.n,LOGO.n,LOGO.R); g.fill();
+const col={r:LOGO.red,w:LOGO.white,g:LOGO.gray};
+for(const L of ['kerbTL','kerbBR','ribUp','ribLow']) for(const sl of LOGO[L].slices) for(const k of ['w','r','g']) if(sl[k]){g.fillStyle=col[k]; g.fill(new Path2D(sl[k]),'evenodd');}
+for(const k of ['w','r','g']) if(LOGO.car[k]){g.fillStyle=col[k]; g.fill(new Path2D(LOGO.car[k]),'evenodd');}
+const im=new Image(); im.onload=()=>{const c=document.getElementById('b').getContext('2d'); c.drawImage(im,0,0,1111,1111);}; im.src='../brand/logo-ui.png';
+</script>
