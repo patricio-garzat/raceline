@@ -1117,14 +1117,17 @@ const Sound = (() => {
 
   function sessionType() { try { if (navigator.audioSession) navigator.audioSession.type = isNative() ? "ambient" : "playback"; } catch (e) {} }
 
-  function create() {
+  // En la landing (blubergames.com) el juego va en un iframe: ahí se usa el AudioContext que la página de afuera ya dejó sonando (window.bluberAudio),
+  // así suena desde que abre (Safari no deja sonar a un iframe hasta que lo tocan a él).
+  function sharedAC() { try { const p = window.parent, s = p !== window && p.bluberAudio; return s && s.state !== "closed" ? s : null; } catch (e) { return null; } }
+  function create(fresh) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    try { if (ac) ac.close(); } catch (e) {}
+    try { if (ac && ac !== sharedAC()) ac.close(); } catch (e) {}
     sessionType();
-    ac = new AC({ latencyHint: "interactive" });
+    ac = (!fresh && sharedAC()) || new AC({ latencyHint: "interactive" });
     gen++; mNode = null;
-    ac.onstatechange = () => { if (ac && ac.state === "running") musicStart(); };
+    ac.addEventListener("statechange", () => { if (ac && ac.state === "running") musicStart(); });
     master = ac.createGain(); master.gain.value = 0.9;
     const comp = ac.createDynamicsCompressor();
     comp.threshold.value = -20; comp.knee.value = 24; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.25;
@@ -1147,14 +1150,15 @@ const Sound = (() => {
     ensure(); if (!ac) return;
     sessionType();
     const p = performance.now();
-    if (ac.state === "running" && lastPerf && p - lastPerf > 800 && ac.currentTime - lastTime < 0.02) { create(); }
+    if (ac.state === "running" && lastPerf && p - lastPerf > 800 && ac.currentTime - lastTime < 0.02) { create(true); }
     if (ac.state !== "running") ac.resume().catch(() => {});
     lastPerf = p; lastTime = ac.currentTime;
   }
   setInterval(() => { if (ac && ac.state === "running") { lastPerf = performance.now(); lastTime = ac.currentTime; } }, 400);
   ["pointerdown", "touchend", "keydown"].forEach((ev) => addEventListener(ev, wake, { passive: true, capture: true }));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); else if (ac && ac.state === "running") ac.suspend().catch(() => {}); });
-  if (isNative()) setTimeout(wake, 0); // en la app suena desde que abre
+  sessionType();   // la web también pide la sesión "playback" desde que abre (suena aunque el iPhone esté en silencio)
+  if (isNative() || sharedAC()) setTimeout(wake, 0); // en la app (y dentro de la landing) suena desde que abre
 
   function whenRunning(cb) {
     ensure();
