@@ -4975,12 +4975,47 @@ const Custom = (() => {
   });
 
   /* ---------- Geometría: del trazo a la pista ---------- */
+  const FIT_H = 46;   // separación de los puntos de control de la spline de ajuste (unidades): más grande = más suave, esquinas más redondas
   const R6 = 6;   // separación de los puntos de la pista (unidades del mundo)
   const bboxOf = (P) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of P) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); } return [x0, y0, x1, y1]; };
   function fitToWorld(P, k = 1) {   // se centra y se agranda para llenar el mundo (sin deformar); k < 1 deja holgura para que el ajuste pueda crecer
     const [x0, y0, x1, y1] = bboxOf(P), bw = Math.max(x1 - x0, 1), bh = Math.max(y1 - y0, 1);
     const s = Math.min((WORLD.w - 190) / bw, 850 / bh, 3) * k, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     return resampleClosed(P.map((p) => [WORLD.w / 2 + (p[0] - cx) * s, 500 + (p[1] - cy) * s]), R6);
+  }
+  /* Ajuste por B-spline cúbica cerrada de mínimos cuadrados: la curva pasa cerca del trazo pero solo puede doblarse "a la escala" de la separación
+     de sus puntos de control (h unidades), así que los temblores y chuecuras del dedo no caben en ella; la curvatura sale continua y sin vaivenes.
+     lam penaliza la segunda diferencia de los puntos de control (menos ondulación todavía). */
+  function splineFit(S, h, lam = 0.35) {
+    const n = S.length, N = Math.max(8, Math.round((n * R6) / h)), M = Array.from({ length: N }, () => new Float64Array(N + 2));
+    for (let k = 0; k < n; k++) {
+      const t = (k * N) / n, i0 = Math.floor(t), u = t - i0, u2 = u * u, u3 = u2 * u;
+      const b = [(1 - u) ** 3 / 6, (3 * u3 - 6 * u2 + 4) / 6, (-3 * u3 + 3 * u2 + 3 * u + 1) / 6, u3 / 6], id = [0, 1, 2, 3].map((j) => (((i0 - 1 + j) % N) + N) % N);
+      for (let a = 0; a < 4; a++) { for (let c = 0; c < 4; c++) M[id[a]][id[c]] += b[a] * b[c]; M[id[a]][N] += b[a] * S[k][0]; M[id[a]][N + 1] += b[a] * S[k][1]; }
+    }
+    const w = lam * (n / N);   // el peso de la regularización crece con las muestras por punto de control
+    for (let j = 0; j < N; j++) {
+      const id = [(j - 1 + N) % N, j, (j + 1) % N], co = [1, -2, 1];
+      for (let a = 0; a < 3; a++) for (let c = 0; c < 3; c++) M[id[a]][id[c]] += w * co[a] * co[c];
+    }
+    for (let c = 0; c < N; c++) {   // eliminación gaussiana con pivote
+      let p = c; for (let r = c + 1; r < N; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]];
+      for (let r = c + 1; r < N; r++) { const f = M[r][c] / M[c][c]; if (!f) continue; for (let k = c; k < N + 2; k++) M[r][k] -= f * M[c][k]; }
+    }
+    const C = new Array(N);
+    for (let r = N - 1; r >= 0; r--) {
+      let x = M[r][N], y = M[r][N + 1];
+      for (let k = r + 1; k < N; k++) { x -= M[r][k] * C[k][0]; y -= M[r][k] * C[k][1]; }
+      C[r] = [x / M[r][r], y / M[r][r]];
+    }
+    const out = [], m = N * 12;
+    for (let k = 0; k < m; k++) {
+      const t = (k * N) / m, i0 = Math.floor(t), u = t - i0, u2 = u * u, u3 = u2 * u, b = [(1 - u) ** 3 / 6, (3 * u3 - 6 * u2 + 4) / 6, (-3 * u3 + 3 * u2 + 3 * u + 1) / 6, u3 / 6];
+      let x = 0, y = 0; for (let j = 0; j < 4; j++) { const q = C[(((i0 - 1 + j) % N) + N) % N]; x += b[j] * q[0]; y += b[j] * q[1]; }
+      out.push([x, y]);
+    }
+    return resampleClosed(out, R6);
   }
   function radii(S, k = 3) {
     const n = S.length, out = new Array(n);
@@ -5047,7 +5082,7 @@ const Custom = (() => {
     return out;
   }
   // raw: puntos del trazo (o de una pista ya guardada). Devuelve { pts, start } o { err: clave de texto }.
-  function process(raw, roadW) {
+  function process(raw, roadW, legacy) {
     const hw = roadW / 2;
     let P = resampleOpen(raw, R6);
     const [bx0, by0, bx1, by1] = bboxOf(P);
@@ -5057,11 +5092,11 @@ const Custom = (() => {
     if (gap > Math.max(260, L * 0.4)) return { err: "c_err_open" };
     const n0 = P.length; P = P.map((p, i) => [p[0] + (gx * i) / (n0 - 1), p[1] + (gy * i) / (n0 - 1)]); P.pop();   // el hueco se reparte a lo largo del trazo
     let S = resampleClosed(P, R6);
-    S = gaussClosed(S, 6);   // quita el temblor del dedo (suave: las esquinas que dibujó se respetan)
+    S = legacy ? gaussClosed(S, 6) : splineFit(gaussClosed(S, 4), FIT_H);   // quita el temblor del dedo: la spline solo puede doblarse a su escala, no cabe lo chueco
     S = relax(fitToWorld(S, 0.93), roadW);     // arregla curvas cerradas y tramos pegados
     let st = findStart(S);
     if (st.turn > 0.18) { S = gaussClosed(flatten(S, st.win), 6); st = findStart(S); }   // la salida siempre en recta
-    S = gaussClosed(S, 4);
+    S = legacy ? gaussClosed(S, 4) : splineFit(S, FIT_H);   // vuelve a ajustar tras los arreglos para que la curvatura quede continua y sin vaivenes
     S = fitToWorld(S);   // al final se agranda para llenar el mundo (agrandar solo ayuda: las curvas se abren y los tramos se separan)
     st = findStart(S);
     if (minSep(S) < roadW + 32) return { err: "c_err_close" };
