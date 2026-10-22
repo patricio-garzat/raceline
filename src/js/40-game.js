@@ -58,7 +58,7 @@ function enterLevel(lv) {
   refreshHint(); setHint("hint_draw");
   demo = !Save.demoSeen && lv.id === 1 ? { t0: performance.now() } : null; if (demo) setHint("demo_hint");
 }
-function leaveLevel() { tmEl.box.classList.add("hidden"); boostSet("hidden"); Sound.enginesStop(); Sound.penEnd(); lightsReset(false); enterHome("levels"); }
+function leaveLevel(mode) { tmEl.box.classList.add("hidden"); boostSet("hidden"); Sound.enginesStop(); Sound.penEnd(); lightsReset(false); enterHome(mode === "title" ? undefined : "levels"); }
 
 /* ---------- Trazo: la línea se queda al soltar el dedo y se puede seguir dibujando desde su final ---------- */
 const allPts = () => { const out = []; for (const st of strokes) for (const p of st) out.push(p); return out; };
@@ -497,9 +497,10 @@ ui.undo.onclick = undoLine;
 ui.go.onclick = startRace;
 $("rAgain").onclick = startRace;
 $("rRedraw").onclick = redraw;
-$("rMenu").onclick = leaveLevel;
+$("rMenu").onclick = () => leaveLevel();
+$("rHome").onclick = () => leaveLevel("title");
 $("rNext").onclick = () => { const n = LEVELS.find((l) => l.id === cur.id + 1); if (n) enterLevel(n); };
-$("g-back").onclick = leaveLevel;
+$("g-back").onclick = () => leaveLevel();
 themeHooks.push(() => { if (TR) renderBackground(); });
 addEventListener("resize", () => { layout(); });
 // ni zoom ni selección de texto en ningún lado (pellizco, doble toque, mantener presionado)

@@ -135,6 +135,7 @@ html[data-theme="dark"] svg.off { stroke: #5B6168; }
 #result .btn { flex: 1; min-width: 0; padding: 14px 8px; box-shadow: none; background: var(--soft); font-size: 14px; }
 #result .btn.primary { background: var(--ink); color: var(--card-solid); }
 #result .btn.wide { width: 100%; flex: none; display: block; margin-bottom: 8px; padding: 16px; font-size: 16px; }
+#result .btn.home { margin: 8px 0 0; padding: 13px; font-size: 14px; }
 #result .btn.hidden { display: none; }
 
 /* ---------- Diálogo ---------- */

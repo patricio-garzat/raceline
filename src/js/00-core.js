@@ -79,6 +79,7 @@ const STR = {
   again: ["Race again", "Correr otra vez"],
   next: ["Next level", "Siguiente nivel"],
   menu: ["Levels", "Niveles"],
+  home: ["Home", "Inicio"],
   lvl_name_1: ["Plaza", "Plaza"],
   lvl_name_2: ["Downtown", "Centro"],
   lvl_name_3: ["Harbor Ave", "Av. del Puerto"],

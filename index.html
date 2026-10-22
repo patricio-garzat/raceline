@@ -157,6 +157,7 @@ html[data-theme="dark"] svg.off { stroke: #5B6168; }
 #result .btn { flex: 1; min-width: 0; padding: 14px 8px; box-shadow: none; background: var(--soft); font-size: 14px; }
 #result .btn.primary { background: var(--ink); color: var(--card-solid); }
 #result .btn.wide { width: 100%; flex: none; display: block; margin-bottom: 8px; padding: 16px; font-size: 16px; }
+#result .btn.home { margin: 8px 0 0; padding: 13px; font-size: 14px; }
 #result .btn.hidden { display: none; }
 
 /* ---------- Diálogo ---------- */
@@ -840,6 +841,7 @@ html.desk .ed-themes { flex-wrap: wrap; overflow: visible; }
       <button class="btn" id="rRedraw" data-i="redraw"></button>
       <button class="btn" id="rAgain" data-i="again"></button>
     </div>
+    <button class="btn wide home" id="rHome" data-i="home"></button>
   </div>
 </div>
 
@@ -975,6 +977,7 @@ const STR = {
   again: ["Race again", "Correr otra vez"],
   next: ["Next level", "Siguiente nivel"],
   menu: ["Levels", "Niveles"],
+  home: ["Home", "Inicio"],
   lvl_name_1: ["Plaza", "Plaza"],
   lvl_name_2: ["Downtown", "Centro"],
   lvl_name_3: ["Harbor Ave", "Av. del Puerto"],
@@ -3776,7 +3779,7 @@ function enterLevel(lv) {
   refreshHint(); setHint("hint_draw");
   demo = !Save.demoSeen && lv.id === 1 ? { t0: performance.now() } : null; if (demo) setHint("demo_hint");
 }
-function leaveLevel() { tmEl.box.classList.add("hidden"); boostSet("hidden"); Sound.enginesStop(); Sound.penEnd(); lightsReset(false); enterHome("levels"); }
+function leaveLevel(mode) { tmEl.box.classList.add("hidden"); boostSet("hidden"); Sound.enginesStop(); Sound.penEnd(); lightsReset(false); enterHome(mode === "title" ? undefined : "levels"); }
 
 /* ---------- Trazo: la línea se queda al soltar el dedo y se puede seguir dibujando desde su final ---------- */
 const allPts = () => { const out = []; for (const st of strokes) for (const p of st) out.push(p); return out; };
@@ -4215,9 +4218,10 @@ ui.undo.onclick = undoLine;
 ui.go.onclick = startRace;
 $("rAgain").onclick = startRace;
 $("rRedraw").onclick = redraw;
-$("rMenu").onclick = leaveLevel;
+$("rMenu").onclick = () => leaveLevel();
+$("rHome").onclick = () => leaveLevel("title");
 $("rNext").onclick = () => { const n = LEVELS.find((l) => l.id === cur.id + 1); if (n) enterLevel(n); };
-$("g-back").onclick = leaveLevel;
+$("g-back").onclick = () => leaveLevel();
 themeHooks.push(() => { if (TR) renderBackground(); });
 addEventListener("resize", () => { layout(); });
 // ni zoom ni selección de texto en ningún lado (pellizco, doble toque, mantener presionado)
