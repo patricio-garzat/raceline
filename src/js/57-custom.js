@@ -31,7 +31,9 @@ const Custom = (() => {
   });
 
   /* ---------- Geometría: del trazo a la pista ---------- */
-  const FIT_H = 46;   // separación de los puntos de control de la spline de ajuste (unidades): más grande = más suave, esquinas más redondas
+  const FIT_H = 20, FIT_LAM = 0.1;   // spline de ajuste: puntos de control cada FIT_H unidades (más grande = más suave y esquinas más redondas); respeta curvas cerradas
+  const W_MIN = 38, GAP = 36, R_EXTRA = 4;   // calle mínima, hueco mínimo entre calles y holgura del radio (radio >= ancho/2 + R_EXTRA)
+  const WIDTHS = [46, 56, 68];   // angosta, normal, ancha (las pistas propias son más angostas que las del juego para poder respetar curvas cerradas)
   const R6 = 6;   // separación de los puntos de la pista (unidades del mundo)
   const bboxOf = (P) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of P) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); } return [x0, y0, x1, y1]; };
   function fitToWorld(P, k = 1) {   // se centra y se agranda para llenar el mundo (sin deformar); k < 1 deja holgura para que el ajuste pueda crecer
@@ -92,8 +94,8 @@ const Custom = (() => {
     return Math.sqrt(m);
   }
   // Arregla solo lo que no sirve: abre las curvas muy cerradas y separa los tramos que quedan muy juntos (sin que el jugador tenga que redibujar)
-  function relax(S, roadW) {
-    const hw = roadW / 2, Rmin = hw * 0.58, Dmin = roadW + 40, g = Math.round(220 / R6), D2 = Dmin * Dmin;
+  function relax(S, Rmin, Dmin) {
+    const g = Math.round(220 / R6), D2 = Dmin * Dmin;
     for (let it = 0; it < 90; it++) {
       const n = S.length, R = radii(S), bad = new Array(n).fill(false); let nb = 0, np = 0;
       for (let i = 0; i < n; i++) if (R[i] < Rmin) { nb++; for (let d = -7; d <= 7; d++) bad[(i + d + n) % n] = true; }
@@ -128,18 +130,11 @@ const Custom = (() => {
     for (let i = 0; i < n; i++) { if (sum < best) { best = sum; bi = i; } sum += d[(i + win) % n] - d[i]; }
     return { turn: best, win: bi, idx: (bi + 22) % n };
   }
-  function flatten(S, i0, win = 34, taper = 12) {   // convierte la parte más recta en una recta de verdad para la salida
-    const n = S.length, A = S[i0], B = S[(i0 + win) % n], out = S.map((p) => p.slice());
-    for (let k = -taper; k <= win + taper; k++) {
-      const i = (i0 + k + n) % n, t = Math.min(1, Math.max(0, k / win)), tx = A[0] + (B[0] - A[0]) * t, ty = A[1] + (B[1] - A[1]) * t;
-      let w = 1; if (k < 0) w = 1 + k / taper; else if (k > win) w = 1 - (k - win) / taper; w = w * w * (3 - 2 * w);
-      out[i] = [S[i][0] + (tx - S[i][0]) * w, S[i][1] + (ty - S[i][1]) * w];
-    }
-    return out;
-  }
-  // raw: puntos del trazo (o de una pista ya guardada). Devuelve { pts, start } o { err: clave de texto }.
-  function process(raw, roadW, legacy) {
-    const hw = roadW / 2;
+  /* La calle se adapta al dibujo (no al revés): su ancho es el pedido, pero nunca más que lo que permiten la curva más cerrada (radio >= ancho/2 + R_EXTRA)
+     y el tramo más cercano (separación >= ancho + GAP). Solo si ni siquiera cabe la calle mínima se abren las curvas o se separan los tramos, lo menos posible. */
+  function widthFor(S, want) { return Math.floor(Math.min(want, 2 * (rminOf(S) - R_EXTRA), minSep(S) - GAP)); }
+  // raw: puntos del trazo. Devuelve { pts, start, w } (w = ancho real de la calle) o { err: clave de texto }.
+  function process(raw, want) {
     let P = resampleOpen(raw, R6);
     const [bx0, by0, bx1, by1] = bboxOf(P);
     if (P.length < 12 || hyp(bx1 - bx0, by1 - by0) < 220) return { err: "c_err_small" };
@@ -147,18 +142,14 @@ const Custom = (() => {
     const last = P[P.length - 1], gx = P[0][0] - last[0], gy = P[0][1] - last[1], gap = hyp(gx, gy);
     if (gap > Math.max(260, L * 0.4)) return { err: "c_err_open" };
     const n0 = P.length; P = P.map((p, i) => [p[0] + (gx * i) / (n0 - 1), p[1] + (gy * i) / (n0 - 1)]); P.pop();   // el hueco se reparte a lo largo del trazo
-    let S = resampleClosed(P, R6);
-    S = legacy ? gaussClosed(S, 6) : splineFit(gaussClosed(S, 4), FIT_H);   // quita el temblor del dedo: la spline solo puede doblarse a su escala, no cabe lo chueco
-    S = relax(fitToWorld(S, 0.93), roadW);     // arregla curvas cerradas y tramos pegados
-    let st = findStart(S);
-    if (st.turn > 0.18) { S = gaussClosed(flatten(S, st.win), 6); st = findStart(S); }   // la salida siempre en recta
-    S = legacy ? gaussClosed(S, 4) : splineFit(S, FIT_H);   // vuelve a ajustar tras los arreglos para que la curvatura quede continua y sin vaivenes
+    let S = splineFit(gaussClosed(resampleClosed(P, R6), 3), FIT_H, FIT_LAM);   // spline cercana al trazo: quita el temblor y deja las curvas tal cual
+    S = fitToWorld(S, 0.95);
+    if (rminOf(S) < W_MIN / 2 + R_EXTRA || minSep(S) < W_MIN + GAP) S = relax(S, W_MIN / 2 + R_EXTRA, W_MIN + GAP);   // solo si no cabe ni la calle mínima
     S = fitToWorld(S);   // al final se agranda para llenar el mundo (agrandar solo ayuda: las curvas se abren y los tramos se separan)
-    st = findStart(S);
-    if (minSep(S) < roadW + 32) return { err: "c_err_close" };
-    if (rminOf(S) < hw * 0.42) return { err: "c_err_tight" };
-    if (st.turn > 0.8) return { err: "c_err_straight" };
-    return { pts: S.map((p) => [Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10]), start: S[st.idx].map((v) => Math.round(v * 10) / 10) };
+    const w = widthFor(S, want);
+    if (w < W_MIN) return { err: minSep(S) < W_MIN + GAP ? "c_err_close" : "c_err_tight" };
+    const st = findStart(S);   // la salida va en el tramo que menos gira; la pista no se toca para ponerla
+    return { pts: S.map((p) => [Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10]), start: S[st.idx].map((v) => Math.round(v * 10) / 10), w };
   }
 
   /* ---------- Costa (agua por el lado con más espacio) ---------- */
@@ -195,7 +186,7 @@ const Custom = (() => {
 
   /* ---------- El editor ---------- */
   const scr = $("scr-editor"), cv = $("ed-cv"), g = cv.getContext("2d"), stage = $("ed-stage"), hintEl = $("ed-hint"), panel = $("ed-panel"), nameEl = $("ed-name");
-  const st = { open: false, phase: "draw", raw: [], pts: null, start: null, roadW: 92, theme: "meadow", diff: 1, editId: null, drawing: false, flash: 0 };
+  const st = { open: false, phase: "draw", raw: [], pts: null, start: null, roadW: 56, want: 56, theme: "meadow", diff: 1, editId: null, drawing: false, flash: 0 };
   let K = 1, OX0 = 0, OY0 = 0, DPR = 1, hintT = 0;
 
   function layout() {
@@ -241,7 +232,7 @@ const Custom = (() => {
       g.fillStyle = "rgba(255,255,255,.85)"; g.beginPath(); g.moveTo(54, 0); g.lineTo(34, -12); g.lineTo(34, 12); g.closePath(); g.fill();
       g.restore();
     } else if (st.raw.length > 1) {
-      const sm = gaussOpen(resampleOpen(st.raw, 5), 13);   // igual que al dibujar la línea de carrera: suave y pegada al dedo (el extremo queda fijo)
+      const sm = gaussOpen(resampleOpen(st.raw, 5), 5);   // casi lo que dibujas (lo justo para quitar el temblor): así la pista final se parece a lo que ves
       path(sm, false); g.lineWidth = 7; g.strokeStyle = "rgba(0,0,0,.18)"; g.stroke();
       path(sm, false); g.lineWidth = 4.5; g.strokeStyle = "#FFFFFF"; g.stroke();
       const f = st.raw[0]; g.beginPath(); g.arc(f[0], f[1], 9, 0, 6.3); g.fillStyle = "#FD1C22"; g.fill(); g.lineWidth = 3; g.strokeStyle = "#fff"; g.stroke();
@@ -266,9 +257,9 @@ const Custom = (() => {
     if (st.pen) { const q = st.pen.tip; for (let i = 0; i < 40 && hyp(st.pen.fing[0] - q[0], st.pen.fing[1] - q[1]) > 2.5; i++) { penFollow(q, st.pen.fing, 14, 22); st.raw.push(q.slice()); } }   // al soltar, la línea alcanza al dedo
     st.drawing = false; Sound.penEnd();
     if (st.raw.length < 8) { st.raw = []; draw(); return; }
-    const res = process(st.raw, st.roadW);
+    const res = process(st.raw, st.want);
     if (res.err) { say(res.err, true, 3200); Haptics.soft(); setTimeout(() => { if (st.phase === "draw" && !st.drawing) { st.raw = []; draw(); } }, 900); return; }
-    st.pts = res.pts; st.start = res.start; setPhase("setup"); Haptics.tap();
+    st.pts = res.pts; st.start = res.start; st.roadW = res.w; setPhase("setup"); Haptics.tap();
   }
   cv.addEventListener("pointerup", endStroke); cv.addEventListener("pointercancel", endStroke);
 
@@ -277,7 +268,8 @@ const Custom = (() => {
     syncPanel(); requestAnimationFrame(layout);
   }
   function syncPanel() {
-    document.querySelectorAll("#ed-w button").forEach((b) => b.classList.toggle("on", +b.dataset.v === st.roadW));
+    const near = WIDTHS.reduce((a, v) => (Math.abs(v - st.want) < Math.abs(a - st.want) ? v : a), WIDTHS[0]);
+    document.querySelectorAll("#ed-w button").forEach((b) => b.classList.toggle("on", +b.dataset.v === near));
     document.querySelectorAll("#ed-d button").forEach((b) => b.classList.toggle("on", +b.dataset.v === st.diff));
     document.querySelectorAll("#ed-themes button").forEach((b) => b.classList.toggle("on", b.dataset.v === st.theme));
     $("ed-title").textContent = T(st.editId ? "c_edit_title" : "c_new");
@@ -289,10 +281,8 @@ const Custom = (() => {
   document.querySelectorAll("#ed-d button").forEach((b) => { b.onclick = () => { st.diff = +b.dataset.v; syncPanel(); }; });
   document.querySelectorAll("#ed-w button").forEach((b) => {
     b.onclick = () => {
-      const w = +b.dataset.v; if (w === st.roadW || !st.pts) return;
-      const res = process(st.pts, w);
-      if (res.err) { say("c_err_width", true, 2600); Haptics.soft(); return; }
-      st.roadW = w; st.pts = res.pts; st.start = res.start; syncPanel(); draw();
+      const want = +b.dataset.v; if (!st.pts) return;
+      st.want = want; st.roadW = Math.max(W_MIN, widthFor(st.pts, want)); syncPanel(); draw();   // la forma no cambia: solo el ancho (que se limita a lo que cabe)
     };
   });
   $("ed-redraw").onclick = () => { st.raw = []; st.pts = null; st.start = null; setPhase("draw"); };
@@ -314,7 +304,7 @@ const Custom = (() => {
 
   function open(lv) {
     const e = lv && entryOf(lv);
-    Object.assign(st, { open: true, raw: [], drawing: false, editId: e ? e.id : null, roadW: e ? e.roadW : 92, theme: e ? e.theme : "meadow", diff: e ? e.diff : 1, pts: e ? e.pts : null, start: e ? e.start : null });
+    Object.assign(st, { open: true, raw: [], drawing: false, editId: e ? e.id : null, roadW: e ? e.roadW : 56, want: e ? e.roadW : 56, theme: e ? e.theme : "meadow", diff: e ? e.diff : 1, pts: e ? e.pts : null, start: e ? e.start : null });
     nameEl.value = e ? e.name : ""; nameEl.placeholder = T("c_default");
     scr.classList.add("show"); setPhase(e ? "setup" : "draw");
   }
