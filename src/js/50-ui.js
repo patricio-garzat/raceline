@@ -127,6 +127,49 @@ const UI = (() => {
     });
   }
 
+
+  /* Deslizar a la derecha para volver (Niveles -> Inicio; Cómo jugar, Récords y Ajustes -> pantalla anterior). La pantalla sigue al dedo y, si se suelta
+     lo bastante lejos o con prisa, se va hacia la derecha; si no, regresa a su lugar. El garaje (que usa gestos propios) solo cede desde el borde izquierdo. */
+  { let g = null;
+    const blocked = () => ["scr-editor", "sheet", "dialog"].some((id) => $(id) && $(id).classList.contains("show"));
+    const target = (x) => {   // qué pantalla se puede cerrar ahora y cómo
+      if (blocked() || (typeof state !== "undefined" && state !== "home")) return null;
+      if (open) return open === "garage" && x > 28 ? null : { el: subs[open], done: back };
+      if (home.classList.contains("show")) return { el: home, done: showTitle };
+      return null;
+    };
+    const reset = (el) => { el.style.transition = el.style.transform = el.style.opacity = ""; };
+    document.addEventListener("pointerdown", (e) => {
+      if (g || !e.isPrimary || (e.target.closest && e.target.closest("input, textarea, canvas, [data-noswipe]"))) return;
+      const t = target(e.clientX); if (t) g = { ...t, id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: e.timeStamp, dx: 0, on: false };
+    }, true);
+    document.addEventListener("pointermove", (e) => {
+      if (!g || e.pointerId !== g.id) return;
+      const dx = e.clientX - g.x0, dy = e.clientY - g.y0;
+      if (!g.on) {
+        if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { g = null; return; }   // fue un desplazamiento vertical
+        if (dx < 12 || dx < Math.abs(dy) * 1.6) return;
+        g.on = true; g.el.style.transition = "none"; try { g.el.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+      g.dx = Math.max(0, dx);
+      g.el.style.transform = `translateX(${g.dx}px)`; g.el.style.opacity = String(Math.max(0.35, 1 - g.dx / (innerWidth * 1.1)));
+      e.preventDefault();
+    }, { capture: true, passive: false });
+    const end = (e) => {
+      if (!g || e.pointerId !== g.id) return;
+      const s = g; g = null; if (!s.on) return;
+      const v = s.dx / Math.max(1, e.timeStamp - s.t0), W = innerWidth, el = s.el, go = s.dx > W * 0.3 || (v > 0.55 && s.dx > 50);
+      el.style.transition = "transform .26s cubic-bezier(.2, .7, .2, 1), opacity .26s ease";
+      el.style.transform = go ? `translateX(${W}px)` : "none"; el.style.opacity = go ? "0" : "1";
+      setTimeout(() => {
+        if (go) { el.style.transition = "none"; s.done(); requestAnimationFrame(() => requestAnimationFrame(() => reset(el))); } else reset(el);
+      }, 270);
+      // el toque que cierra el gesto no debe activar un botón
+      const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); removeEventListener("click", stop, true); }; addEventListener("click", stop, true); setTimeout(() => removeEventListener("click", stop, true), 400);
+    };
+    document.addEventListener("pointerup", end, true); document.addEventListener("pointercancel", end, true);
+  }
+
   document.querySelectorAll("[data-go]").forEach((b) => { b.onclick = () => go(b.dataset.go); });
   document.querySelectorAll("[data-back]").forEach((b) => { b.onclick = back; });
   document.querySelectorAll("[data-ic]").forEach((el) => { el.innerHTML = ICON[el.dataset.ic] || ""; });
